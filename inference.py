@@ -2,17 +2,22 @@ import json
 import logging
 import sys
 import os
+from PIL import Image
+import io
+import requests
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 import torchvision.transforms as transforms
-from PIL import Image
-import io
-import requests
+
+
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
+
 JSON_CONTENT_TYPE = 'application/json'
 JPEG_CONTENT_TYPE = 'image/jpeg'
 
@@ -58,19 +63,10 @@ def input_fn(request_body, content_type=JPEG_CONTENT_TYPE):
     #if content_type == JPEG_CONTENT_TYPE: return io.BytesIO(request_body)
     logger.debug(f'Request body CONTENT-TYPE is: {content_type}')
     logger.debug(f'Request body TYPE is: {type(request_body)}')
-    if content_type == JPEG_CONTENT_TYPE: return Image.open(io.BytesIO(request_body))
-    logger.debug('SO loded JPEG content')
-    # process a URL submitted to the endpoint
-    
-    if content_type == JSON_CONTENT_TYPE:
-        #img_request = requests.get(url)
-        logger.debug(f'Request body is: {request_body}')
-        request = json.loads(request_body)
-        logger.debug(f'Loaded JSON object: {request}')
-        url = request['url']
-        img_content = requests.get(url).content
-        return Image.open(io.BytesIO(img_content))
-    
+    if content_type == JPEG_CONTENT_TYPE: 
+        return Image.open(io.BytesIO(request_body))
+    logger.debug('SO loaded JPEG content')
+
     raise Exception('Requested unsupported ContentType in content_type: {}'.format(content_type))
 
 # inference

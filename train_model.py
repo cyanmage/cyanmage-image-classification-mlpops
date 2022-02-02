@@ -16,9 +16,9 @@ from tqdm import tqdm
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-from smdebug import modes                    # HOOK TO IMPLEMENT
-#from smdebug.profiler.utils import str2bool  # HOOK TO IMPLEMENT
-from smdebug.pytorch import get_hook         # HOOK TO IMPLEMENT
+from smdebug import modes                     # HOOK TO IMPLEMENT
+#from smdebug.profiler.utils import str2bool  # HOOK TO IMPLEMENT --> seems not to be more supported in the latest versions of sagemaker sdk
+from smdebug.pytorch import get_hook          # HOOK TO IMPLEMENT
 
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -51,18 +51,19 @@ def test(model, test_loader, criterion, device=None):
     logger.info(f"Testing Loss: {total_loss}")
     logger.info(f"Testing Accuracy: {total_acc}")
 
-def train(model, train_loader, validation_loader, criterion, optimizer, device=None):
+def train(model, train_loader, validation_loader, criterion, optimizer, epochs=10, device=None):
     
-    hook = get_hook(create_if_not_exists=True)           # HOOK TO IMPLEMENT  
-    if hook:                                              # HOOK TO IMPLEMENT
+    hook = get_hook(create_if_not_exists=True)             # HOOK TO IMPLEMENT  
+    if hook:                                               # HOOK TO IMPLEMENT
         hook.register_loss(criterion)                      # HOOK TO IMPLEMENT
+        # hook.register_loss(model)
     
     '''
     TODO: Complete this function that can take a model and
           data loaders for training and will get train the model
           Remember to include any debugging/profiling hooks that you might need
     '''    
-    epochs=50
+
     best_loss=1e6
     image_dataset={'train':train_loader, 'valid':validation_loader}
     loss_counter=0
@@ -78,7 +79,7 @@ def train(model, train_loader, validation_loader, criterion, optimizer, device=N
                 model.train()
             else:
                 if hook:
-                    hook.set_mode(modes.EVAL)         # HOOK TO IMPLEMENT                  
+                    hook.set_mode(modes.EVAL)          # HOOK TO IMPLEMENT                  
                 model.eval()
             running_loss = 0.0
             running_corrects = 0
@@ -113,10 +114,9 @@ def train(model, train_loader, validation_loader, criterion, optimizer, device=N
                                                                                  epoch_loss,
                                                                                  epoch_acc,
                                                                                  best_loss))
-        if loss_counter==1:
+        if loss_counter==2:
             break
-        #if epoch==0:
-        #    break
+            
     return model
     
 def net():
@@ -193,7 +193,7 @@ def main(args):
     '''    
     logger.info("Starting Model Training")
     #model=train(model, train_loader, validation_loader, criterion, optimizer)
-    model=train(model, train_loader, validation_loader, criterion, optimizer, device)
+    model=train(model, train_loader, validation_loader, criterion, optimizer, args.epochs, device)
     
     '''
     TODO: Test the model to see its accuracy
@@ -217,6 +217,9 @@ if __name__=='__main__':
     
     parser.add_argument('--learning_rate', type=float)
     parser.add_argument('--batch_size', type=int)
+    
+    parser.add_argument('--epochs', type=int)
+    
     parser.add_argument('--data', type=str, default=os.environ['SM_CHANNEL_TRAINING'])
     parser.add_argument('--model_dir', type=str, default=os.environ['SM_MODEL_DIR'])
     parser.add_argument('--output_dir', type=str, default=os.environ['SM_OUTPUT_DATA_DIR'])
