@@ -1,0 +1,202 @@
+import json
+import logging
+import sys
+import os
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.models as models
+import torchvision.transforms as transforms
+from PIL import Image
+import io
+import requests
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler(sys.stdout))
+JSON_CONTENT_TYPE = 'application/json'
+JPEG_CONTENT_TYPE = 'image/jpeg'
+
+
+logger.info("/////////**********         IN THE ENTRY_POINT OF THE PREDICTOR        *********////////////")
+#import Nets
+
+
+'''
+def model_fn(model_dir):
+    print("In model_fn. Model directory is -")
+    print(model_dir)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = Net().to(device)
+    
+    with open(os.path.join(model_dir, "model.pth"), "rb") as f:
+        print("Loading the vegetables-classifier model")
+        checkpoint = torch.load(f , map_location =device)
+        model.load_state_dict(checkpoint)
+        print('MODEL-LOADED')
+        logger.info('model loaded successfully')
+    model.eval()
+    return model
+'''
+
+def model_fn(model_dir):
+    print(F"###################### YES THE MODEL_fn --- MODEL DIR / {model_dir}  ######################")
+    model = Net_5()
+    logger.info(f"THE MODEL DIR IS {model_dir}")
+    with open(os.path.join(model_dir, 'model.pth'), 'rb') as f:
+        model.load_state_dict(torch.load(f))
+    logger.info(f"###################### IN THE END OF LOADING FUNCTION{os.path.join(model_dir, 'model.pth')}   ######################")        
+    return model
+
+
+def input_fn(request_body, content_type=JPEG_CONTENT_TYPE):
+    print("################### THE INPUT FUNCTION   ##########################")
+    logger.info('##############  Deserializing the input data.   #######################')
+    # process an image uploaded to the endpoint
+    #if content_type == JPEG_CONTENT_TYPE: return io.BytesIO(request_body)
+    logger.debug(f'   ***********Request body CONTENT-TYPE is: {content_type}')
+    logger.debug(f'  **************Request body TYPE is: {type(request_body)}')
+    if content_type == JPEG_CONTENT_TYPE: return Image.open(io.BytesIO(request_body))
+    logger.debug('   **************SO loded JPEG content')
+    # process a URL submitted to the endpoint
+    
+    if content_type == JSON_CONTENT_TYPE:
+        #img_request = requests.get(url)
+        logger.debug(f'    **********Request body is: {request_body}')
+        request = json.loads(request_body)
+        logger.debug(f'   ***********Loaded JSON object: {request}')
+        url = request['url']
+        img_content = requests.get(url).content
+        return Image.open(io.BytesIO(img_content))
+    
+    raise Exception('Requested unsupported ContentType in content_type: {}'.format(content_type))
+
+# inference
+def predict_fn(input_object, model):
+    print("################### THE PREDICT FUNCTION   ##########################")
+    logger.info('##############  In predicitn funciton.   #######################')
+
+    test_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    ])
+    logger.info("   ***********Ltransforming input")
+    input_object=test_transform(input_object)
+
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    model.to(device)    
+    
+    with torch.no_grad():
+        logger.info("   ***********LCalling model")
+        prediction = model(input_object.unsqueeze(0).to(device))
+    return prediction
+
+
+
+
+# postprocess
+'''
+
+def output_fn(predictions, content_type):
+    assert content_type == "application/json"
+    res = predictions.cpu().numpy().tolist()
+    return json.dumps(res)
+'''
+
+'''
+# Serialize the prediction result into the desired response content type
+print("################### THE OUTPUT FUNCTION   ##########################")
+logger.info('##############  OUTPUT  function.   #######################')
+def output_fn(prediction, accept=JSON_CONTENT_TYPE):        
+    logger.info('***********  Serializing the generated output.')
+    if accept == JSON_CONTENT_TYPE: 
+        logger.debug(f'***********  Returning response {json.dumps(prediction)}')
+        return json.dumps(prediction), accept
+    raise Exception('***********  Requested unsupported ContentType in Accept: {}'.format(accept))
+'''
+
+num_classes = 15
+
+def Net_1():
+    model = models.resnet50(pretrained=True)
+
+    for param in model.parameters():
+        param.requires_grad = False   
+
+    model.fc = nn.Sequential(
+                   nn.Linear(2048, 128),
+                   nn.ReLU(inplace=True),
+                   nn.Linear(128, num_classes))
+    return model
+
+class Net_2(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 100, kernel_size=3, padding=1),
+        self.conv2 =    nn.Conv2d(100, 150, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(150, 200, kernel_size=3, stride=1, padding=1)
+        self.conv4 = nn.Conv2d(200, 200, kernel_size=3, stride=1, padding=1)
+        self.conv5 = nn.Conv2d(200, 250, kernel_size=3, stride=1, padding=1)
+        self.conv6 = nn.Conv2d(250, 250, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+   
+        self.fc1 = nn.Linear(6250, 256)
+        self.fc2 = nn.Linear(256, 128)    
+        self.fc3 = nn.Linear(128, 64)
+        self.fc4 = nn.Linear(64, 32)
+        self.fc6 = nn.Linear(32, num_classes)
+        
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = F.relu(self.conv3(x))
+        x = self.pool(F.relu(self.conv4(x)))
+        x = F.relu(self.conv5(x))
+        x = self.pool(F.relu(self.conv6(x)))         
+
+        x = torch.flatten(x, 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = self.fc6(F.dropout(x, 0.25))
+
+        return x
+
+class Net_3(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # TODO: Define the layers you need in your model
+        self.conv1 = nn.Conv2d(3,6,5)
+        self.pool = nn.MaxPool2d(2,2)
+        self.conv2 = nn.Conv2d(6,16,5)
+        self.fc1 = nn.Linear(16 * 5 * 5, 200)
+        self.fc2 = nn.Linear(200, 84)
+        self.fc3 = nn.Linear(84,num_classes)
+        
+
+    def forward(self, x):
+        #TODO: Define your model execution
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        
+        x = torch.flatten(x, 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+    
+
+def Net_5():
+    model = models.resnet152(pretrained=True)
+
+    for param in model.parameters():
+        param.requires_grad = False   
+
+    model.fc = nn.Sequential(
+                   nn.Linear(2048, 1024),
+                   nn.ReLU(inplace=True),
+                   nn.Linear(1024, 256),
+                   nn.ReLU(inplace=True),
+                   nn.Linear(256, num_classes))
+    return model
