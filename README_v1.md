@@ -1,4 +1,4 @@
-# Image Classification using AWS SageMaker 
+# Image Classification using AWS SageMaker
 
 Use AWS Sagemaker to train a pretrained model that can perform image classification by using the Sagemaker profiling, debugger, hyperparameter tuning and other good ML engineering practices. This can be done on either the provided dog breed classication data set or one of your choice.
 
@@ -17,20 +17,20 @@ Upload the data to an S3 bucket through the AWS Gateway so that SageMaker has ac
 <br><br><br>
 
 ## Explanations of the different files used in the project
-* train_and_deploy.ipynb : the notebook from will we will manage and supervise :
+* train_and_deploy.ipynb : the notebook from which we will manage and supervise :
     * data downloading and storing
     * hyperparameter tuning, training with the best hyperparameters found
     * setup of debugging and profiling parameters, brief exploitation of the results
     * deployment of an endpoint and prediction
-* hpo.py : file used by hyperparameter tuning job. We tell it :
+* hpo.py : file used by the hyperparameter tuning job. We tell it :
     * where the data are stored
     * how to transform these datas
     * how to make training, testing and validation phases
     * to use the gpu feature of the "ml.p3.xlarge" instance type, so we tune the model and datas accordingly.
     * the definition of the model
-* train_model.py : same as hpo.py, but we add the code to make debugging and profiling in sagameker.
+* train_model.py : same as hpo.py, but we add the code to make debugging and profiling in sagemaker.
     * import and use of smdebug modes TRAIN and EVAL 
-    * import and use the get_hook function
+    * import and use of the get_hook function
     * register the criterion to follow (or the model itself)
 * inference.py : entry point for the container of the inference instance. It determines how to fetch, use the model datas.
 
@@ -52,21 +52,31 @@ These hyperparameter ranges were passed in an HyperparameterTuner instance class
 
 #### 1) Screenshot of completed hyperparameter tuning jobs:
 
-![](img/HYPERPARAMETER_TUNING/During_training_jobs_4_all_completed.jpg)
+![](IMG/HYPERPARAMETER_TUNING/During_hyperparameter_training_job_3_all_completed.png)
+<br>
 
 #### 2) Screenshot of best hyperparameters training job :
 
-![](img/HYPERPARAMETER_TUNING/best_training_job_hyperparameters.jpg)
+![](img/HYPERPARAMETER_TUNING/best_training_job_hyperparameters.png)
+<br>
 
 #### 3) Metrics of hyperparameter tuning jobs (What is logged internally in the program and that the hook exploits):
-![](img/HYPERPARAMETER_TUNING/Metrics_of_hyperparameter_tuning_jobs.jpg)
+![](img/HYPERPARAMETER_TUNING/Metrics_of_hyperparameter_tuning_jobs.png)
 
 #### 4) Cloudwatch metrics during the training process (what AWS sees externally):
-![](img/HYPERPARAMETER_TUNING/metric_cpu_utilization.jpg)
+![](img/HYPERPARAMETER_TUNING/metric_CPU_utilization.png)
+<br>
 
-![](img/HYPERPARAMETER_TUNING/metric_disk_utilization.jpg)
+![](img/HYPERPARAMETER_TUNING/metric_Memory_utilization.png)
+<br>
 
-![](img/HYPERPARAMETER_TUNING/metric_memory_utilization.jpg)
+![](img/HYPERPARAMETER_TUNING/metric_Disk_utilization.png)
+<br>
+
+![](img/HYPERPARAMETER_TUNING/metric_GPU_utilization.png)
+<br>
+
+![](metric_GPUMemory_Utilization.png)
 
 
 <br><br><br>
@@ -92,7 +102,7 @@ loss_not_decreasing(), vanishing_gradient(), exploding_tensor(), overfit(), clas
 LowGPUUtilization(), OverallSystemUsage(), CPUBottleneck()
 
 #### Artifact folders created after debugging and profiling jobs
-![](img/DEBUGGING_TRAINING/Artifacts_folders.jpg)
+![](IMG/DEBUGGING_TRAINING/Artifacts_folders.png)
 
 
 <br><br>
@@ -222,7 +232,10 @@ Here is a screenshot of a deployed active endpoint :
 
 <br>
 
-![](img/ENDPOINT/endpoint_screenshot_in_sagemaker.png)
+![](IMG/ENDPOINT/active_endpoint.png)
+
+
+
 
 
 
