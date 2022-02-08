@@ -26,13 +26,13 @@ Upload the data to an S3 bucket through the AWS Gateway so that SageMaker has ac
     * where the data are stored
     * how to transform these datas
     * how to make training, testing and validation phases
-    * to use the gpu feature of the "ml.p3.xlarge" instance type, so we tune the model and datas accordingly.
+    * to use the cuda feature of the "ml.p3.xlarge" instance (1gpu), so we tune the model and datas accordingly.
     * the definition of the model
 * train_model.py : same as hpo.py, but we add the code to make debugging and profiling in sagemaker.
     * import and use of smdebug modes TRAIN and EVAL 
     * import and use of the get_hook function
     * register the criterion to follow (or the model itself)
-* inference.py : entry point for the container of the inference instance. It determines how to fetch, use the model datas.
+* inference.py : entry point for the container of the inference instance. It determines how to fetch, use the model datas for this type of instance.
 
 <br><br><br>
 
@@ -57,49 +57,49 @@ These hyperparameter ranges were passed in an HyperparameterTuner instance class
 
 #### 2) Screenshot of best hyperparameters training job :
 
-![](img/HYPERPARAMETER_TUNING/best_training_job_hyperparameters.png)
+![](IMG/HYPERPARAMETER_TUNING/best_training_job_hyperparameters.png)
 <br>
 
 #### 3) Metrics of hyperparameter tuning jobs (What is logged internally in the program and that the hook exploits):
-![](img/HYPERPARAMETER_TUNING/Metrics_of_hyperparameter_tuning_jobs.png)
+![](IMG/HYPERPARAMETER_TUNING/Metrics_of_hyperparameter_tuning_jobs.png)
 
 #### 4) Cloudwatch metrics during the training process (what AWS sees externally):
-![](img/HYPERPARAMETER_TUNING/metric_CPU_utilization.png)
-<br>
+![](IMG/HYPERPARAMETER_TUNING/metric_CPU_utilization.png)
 
-![](img/HYPERPARAMETER_TUNING/metric_Memory_utilization.png)
-<br>
+---
+   
+![](IMG/HYPERPARAMETER_TUNING/metric_Memory_utilization.png)
 
-![](img/HYPERPARAMETER_TUNING/metric_Disk_utilization.png)
-<br>
+---
+   
+![](IMG/HYPERPARAMETER_TUNING/metric_Disk_utilization.png)
 
-![](img/HYPERPARAMETER_TUNING/metric_GPU_utilization.png)
-<br>
+---
+   
+![](IMG/metric_GPU_utilization.png)
 
-![](metric_GPUMemory_Utilization.png)
+---
+   
+![](IMG/HYPERPARAMETER_TUNING/metric_GPUMemory_Utilization.png)
 
 
-<br><br><br>
+<br><br>
 ## Debugging and Profiling
 
 ### Method overview
 
-- I created a hook in the train_model.py file :   
-    hook = smd.Hook.create_from_json_file()   
-    hook.register_hook(model)
-- I passed it as argument in the train and test functions
+- I created and registered a hook directly in the train function (of the train_and_deploy.py script)
+    
+    hook = get_hook(create_if_not_exists=True)   
+    hook.register_loss(criterion) 
 - In the train function:   
- I set the "TRAIN" mode during training -hook.set_mode(smd.modes.TRAIN)  
- and "EVAL" during validation -hook.set_mode(smd.modes.EVAL)
-- In the test function, it was naturally set to EVAL mode.
+ I set the "TRAIN" mode during training hook.set_mode(modes.TRAIN)  
+ and "EVAL" during validation hook.set_mode(modes.TRAIN)
 
-The configs for profiler and debugger are prepared in the following dictionaries : profiler_config and debugger_config, and then passed to profiler_config and 
-debugger_hook_config arguments of an estimator, as well as chosen rules.
+The configs for profiler and debugger are prepared in the following dictionaries : profiler_config and debugger_config, and then passed to profiler_config and debugger_hook_config arguments of an estimator, as well as chosen rules.
 Here are the ones I tested:
 - Debugger rules:     
-loss_not_decreasing(), vanishing_gradient(), exploding_tensor(), overfit(), class_imbalance() (can be used with this pytorch DL framework), overtraining(), poor_weight_initialization()
-- Profiler rules:    
-LowGPUUtilization(), OverallSystemUsage(), CPUBottleneck()
+vanishing_gradient(), overfit(), overtraining(), poor_weight_initialization()
 
 #### Artifact folders created after debugging and profiling jobs
 ![](IMG/DEBUGGING_TRAINING/Artifacts_folders.png)
@@ -110,12 +110,11 @@ LowGPUUtilization(), OverallSystemUsage(), CPUBottleneck()
 
 Here is the repartition of the different rules tested.
 
-![](img/DEBUGGING_TRAINING/Rules_and_results.png)
+![](IMG/DEBUGGING_TRAINING/Rules_and_results.png)
 
-- "GPU" has not been used, so LowGPUUtilization is not relevant.  
-- What would be interesting to investigate are the "explodingTensor" and "Overfit" errors. It seems that coefficients of tensors are getting bigger and bigger. 
-Moreover, with overfitting, the model adapts to training data, but not so well for validation data...   
-- And some issues are found for initialization of weights and maybe for CPU bottlenecks.
+No issue was found, but when I tested with other configurations, I could obtain these errors : 
+- LowGPUUtilization: IssuesFound, as I was using an instance without GPU.
+A possibility is to take an instance like "ml.p3.2xlarge" to use a GPU 
 
 <br>
 
