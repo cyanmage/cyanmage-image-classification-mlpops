@@ -192,7 +192,9 @@ def main(args):
     TODO: Create your loss and optimizer
     '''    
     criterion = nn.CrossEntropyLoss(ignore_index=133)
-    optimizer = optim.Adam(model.fc.parameters(), lr=args.learning_rate)
+    #optimizer = optim.Adam(model.fc.parameters(), lr=args.learning_rate)    
+    optimizer = optim.SGD(model.fc.parameters(), lr=args.learning_rate, momentum=args.momentum)   
+    
 
     '''
     TODO: Call the train function to start training your model
@@ -224,6 +226,7 @@ if __name__=='__main__':
     
     parser.add_argument('--learning_rate', type=float)
     parser.add_argument('--batch_size', type=int)
+    parser.add_argument("--momentum", type=float)
     
     parser.add_argument('--epochs', type=int)
     

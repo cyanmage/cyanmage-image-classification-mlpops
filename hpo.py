@@ -52,7 +52,7 @@ def train(model, train_loader, validation_loader, criterion, optimizer, device=N
           data loaders for training and will get train the model
           Remember to include any debugging/profiling hooks that you might need
     '''    
-    epochs=50
+    epochs=5
     best_loss=1e6
     image_dataset={'train':train_loader, 'valid':validation_loader}
     loss_counter=0
@@ -160,7 +160,7 @@ def main(args):
     '''    
     train_loader, test_loader, validation_loader=create_data_loaders(args.data, args.batch_size)
     model=net()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Running in device {device}")    
     model = model.to(device) 
     #device=None
@@ -169,7 +169,8 @@ def main(args):
     TODO: Create your loss and optimizer
     '''    
     criterion = nn.CrossEntropyLoss(ignore_index=133)
-    optimizer = optim.Adam(model.fc.parameters(), lr=args.learning_rate)
+    #optimizer = optim.Adam(model.fc.parameters(), lr=args.learning_rate)
+    optimizer = optim.SGD(model.fc.parameters(), lr=args.learning_rate, momentum=args.momentum)    
 
     '''
     TODO: Call the train function to start training your model
@@ -201,6 +202,8 @@ if __name__=='__main__':
     
     parser.add_argument('--learning_rate', type=float)
     parser.add_argument('--batch_size', type=int)
+    parser.add_argument("--momentum", type=float, default=0.5, metavar="M", help="SGD momentum (default: 0.5)")
+    
     parser.add_argument('--data', type=str, default=os.environ['SM_CHANNEL_TRAINING'])
     parser.add_argument('--model_dir', type=str, default=os.environ['SM_MODEL_DIR'])
     parser.add_argument('--output_dir', type=str, default=os.environ['SM_OUTPUT_DATA_DIR'])
