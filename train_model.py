@@ -16,6 +16,7 @@ from tqdm import tqdm
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+import smdebug.pytorch as smd
 from smdebug import modes                     # HOOK TO IMPLEMENT
 #from smdebug.profiler.utils import str2bool  # HOOK TO IMPLEMENT --> seems not to be more supported in the latest versions of sagemaker sdk
 from smdebug.pytorch import get_hook          # HOOK TO IMPLEMENT
@@ -24,13 +25,15 @@ logger=logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-def test(model, test_loader, criterion, device=None):
+def test(model, test_loader, criterion, hook, device=None):
     
     '''
     TODO: Complete this function that can take a model and a 
           testing data loader and will get the test accuray/loss of the model
           Remember to include any debugging/profiling hooks that you might need
-    '''    
+    '''  
+    hook.set_mode(modes.EVAL)
+    
     model.eval()
     running_loss=0
     running_corrects=0
@@ -51,11 +54,11 @@ def test(model, test_loader, criterion, device=None):
     logger.info(f"Testing Loss: {total_loss}")
     logger.info(f"Testing Accuracy: {total_acc}")
 
-def train(model, train_loader, validation_loader, criterion, optimizer, epochs=10, device=None):
+def train(model, train_loader, validation_loader, criterion, optimizer, hook, epochs=10, device=None):
     
-    hook = get_hook(create_if_not_exists=True)             # HOOK TO IMPLEMENT  
-    if hook:                                               # HOOK TO IMPLEMENT
-        hook.register_loss(criterion)                      # HOOK TO IMPLEMENT
+    #hook = get_hook(create_if_not_exists=True)             # HOOK TO IMPLEMENT  
+    #if hook:                                               # HOOK TO IMPLEMENT
+    #    hook.register_loss(criterion)                      # HOOK TO IMPLEMENT
         # hook.register_loss(model)
     
     '''
@@ -169,18 +172,22 @@ def create_data_loaders(data, batch_size):
 def main(args):
     logger.info(f'Hyperparameters are LR: {args.learning_rate}, Batch Size: {args.batch_size}')
     logger.info(f'Data Paths: {args.data}')
-
-  
+   
+    
     '''
     TODO: Initialize a model by calling the net function
     '''    
     train_loader, test_loader, validation_loader=create_data_loaders(args.data, args.batch_size)
     model=net()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Running in device {device}")    
     model = model.to(device) 
     #device=None
 
+    ### Creation of the hook
+    hook = smd.Hook.create_from_json_file()
+    hook.register_hook(model) 
+    
     '''
     TODO: Create your loss and optimizer
     '''    
@@ -193,14 +200,14 @@ def main(args):
     '''    
     logger.info("Starting Model Training")
     #model=train(model, train_loader, validation_loader, criterion, optimizer)
-    model=train(model, train_loader, validation_loader, criterion, optimizer, args.epochs, device)
+    model=train(model, train_loader, validation_loader, criterion, optimizer, hook, args.epochs, device)
     
     '''
     TODO: Test the model to see its accuracy
     '''    
     logger.info("Testing Model")
     #test(model, test_loader, criterion)
-    test(model, test_loader, criterion, device)
+    test(model, test_loader, criterion, hook, device)
     
     '''
     TODO: Save the trained model
