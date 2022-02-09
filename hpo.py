@@ -52,7 +52,7 @@ def train(model, train_loader, validation_loader, criterion, optimizer, device=N
           data loaders for training and will get train the model
           Remember to include any debugging/profiling hooks that you might need
     '''    
-    epochs=5
+    epochs=40
     best_loss=1e6
     image_dataset={'train':train_loader, 'valid':validation_loader}
     loss_counter=0
